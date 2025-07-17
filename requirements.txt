@@ -1,0 +1,7 @@
+torch
+numpy
+requests
+pyyaml
+tqdm
+tensorboard
+matplotlib 
