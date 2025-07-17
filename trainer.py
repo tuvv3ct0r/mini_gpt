@@ -34,7 +34,7 @@ class Trainer:
         best_val_loss = float('inf')
         import random
         use_amp = self.config.get('use_amp', False) and torch.cuda.is_available()
-        scaler = torch.cuda.amp.GradScaler() if use_amp else None
+        scaler = torch.amp.GradScaler() if use_amp else None
         for epoch in range(self.config['epochs']):
             self.model.train()
             train_loss = 0
@@ -88,7 +88,7 @@ class Trainer:
             for xb, yb in self.datamodule.val_dataloader():
                 xb, yb = xb.to(self.device), yb.to(self.device)
                 if use_amp:
-                    with torch.cuda.amp.autocast():
+                    with torch.cuda.autocast():
                         logits, loss = self.model(xb, yb)
                 else:
                     logits, loss = self.model(xb, yb)
