@@ -7,7 +7,7 @@ n_heads: 12
 dropout: 0.1
 bias: true
 learning_rate: 0.0003
-batch_size: 32  # Start with 32, adjust if OOM
+batch_size: 32
 eval_interval: 500
 eval_iters: 200
 device: cuda  # or 'cpu'
