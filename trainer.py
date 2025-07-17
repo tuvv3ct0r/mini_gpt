@@ -21,6 +21,9 @@ class Trainer:
 
     def train(self):
         self.model.to(self.device)
+        if getattr(torch, 'compile', None) and self.config.get('use_compile', False):
+            print('Compiling model with torch.compile()...')
+            self.model = torch.compile(self.model)
         # Print parameter summary
         print("\nModel Parameter Summary:")
         total_params = 0
@@ -30,20 +33,30 @@ class Trainer:
         print(f"Total parameters: {total_params}\n{'-'*40}")
         best_val_loss = float('inf')
         import random
+        use_amp = self.config.get('use_amp', False) and torch.cuda.is_available()
+        scaler = torch.cuda.amp.GradScaler() if use_amp else None
         for epoch in range(self.config['epochs']):
             self.model.train()
             train_loss = 0
             for batch_idx, (xb, yb) in enumerate(self.datamodule.train_dataloader()):
                 xb, yb = xb.to(self.device), yb.to(self.device)
-                logits, loss = self.model(xb, yb)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+                if use_amp:
+                    with torch.cuda.amp.autocast():
+                        logits, loss = self.model(xb, yb)
+                    self.optimizer.zero_grad()
+                    scaler.scale(loss).backward()
+                    scaler.step(self.optimizer)
+                    scaler.update()
+                else:
+                    logits, loss = self.model(xb, yb)
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
                 train_loss += loss.item()
             train_loss /= len(self.datamodule.train_dataloader())
             self.train_losses.append(train_loss)
             self.writer.add_scalar('Loss/train', train_loss, epoch)
-            val_loss = self.validate(epoch)
+            val_loss = self.validate(epoch, use_amp)
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 self.save_checkpoint(epoch, best=True)
@@ -68,13 +81,17 @@ class Trainer:
                 self.writer.add_text('Sample', sample_text, epoch)
         self.plot_losses()
 
-    def validate(self, epoch):
+    def validate(self, epoch, use_amp=False):
         self.model.eval()
         val_loss = 0
         with torch.no_grad():
             for xb, yb in self.datamodule.val_dataloader():
                 xb, yb = xb.to(self.device), yb.to(self.device)
-                logits, loss = self.model(xb, yb)
+                if use_amp:
+                    with torch.cuda.amp.autocast():
+                        logits, loss = self.model(xb, yb)
+                else:
+                    logits, loss = self.model(xb, yb)
                 val_loss += loss.item()
         val_loss /= len(self.datamodule.val_dataloader())
         self.val_losses.append(val_loss)

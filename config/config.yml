@@ -1,16 +1,19 @@
 vocab_size: null
-max_seq_len: 1024
-d_model: 512
-n_layers: 4
-n_heads: 4
+max_seq_len: 512  # Reduce context length for memory
+# Model size for ~9GB VRAM (GPT-2 small/medium scale)
+d_model: 768
+n_layers: 12
+n_heads: 12
 dropout: 0.1
 bias: true
 learning_rate: 0.0003
-batch_size: 16
+batch_size: 32  # Start with 32, adjust if OOM
 eval_interval: 500
 eval_iters: 200
-device: cpu  # or 'cuda / cpu'
+device: cuda  # or 'cpu'
 epochs: 10
 log_dir: logs
-ckpt_dir: checkpoints 
-input_txt: data/input.txt 
+ckpt_dir: checkpoints
+input_txt: data/input.txt
+use_amp: true  # Enable mixed precision 
+use_compile: true
